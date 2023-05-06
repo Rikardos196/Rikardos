@@ -1,1 +1,30 @@
+with user_hours AS (
+select user_id
+	,sum(m_hours) as s_hours
+from (select app_id
+	  ,user_id
+	  ,max(hours) as m_hours
+	  from users 
+ 	  group by app_id, user_id) as m_hours_table
+group by user_id
+)
 
+select table_with_reviews.user_id
+,case when product_count > products then product_count else products end product_count
+,case when review_count > reviews then review_count else reviews end review_count
+,total_played_hours
+,helpful_count
+,recommended_product_count
+from    (select user_id
+		 ,count(app_id) as product_count
+		 ,count(review_id) as review_count
+		 ,s_hours as total_played_hours
+		 ,count(case when helpful <> 0 then 1 end) as helpful_review_count
+		 ,sum(case when is_recommended IS true then 1 else 0 end) as recommended_product_count 
+		 from users join user_hours using(user_id)
+		 group by user_id, total_played_hours) as table_with_reviews 
+right join (select *
+			from recommendations) as all_users
+on table_with_reviews.user_id = all_users.user_id 
+order by review_count desc
+limit 100
